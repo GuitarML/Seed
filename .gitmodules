@@ -1,0 +1,12 @@
+[submodule "libDaisy"]
+	path = libDaisy
+	url = https://github.com/electro-smith/libDaisy
+[submodule "DaisySP"]
+	path = DaisySP
+	url = https://github.com/electro-smith/DaisySP
+[submodule "Terrarium"]
+	path = Terrarium
+	url = https://github.com/PedalPCB/Terrarium
+[submodule "RTNeural"]
+	path = RTNeural
+	url = https://github.com/jatinchowdhury18/RTNeural.git
