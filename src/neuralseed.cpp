@@ -33,8 +33,12 @@ Looper looper;
 #define MAX_SIZE (48000 * 60 * 4) // 4 minutes of floats at 48 khz
 float DSY_SDRAM_BSS buf[MAX_SIZE];
 Oscillator led_osc; // For pulsing the led when recording
-//int pressCount;
-
+float ledBrightness;
+Oscillator led_osc2; // For pulsing the led when recording
+float ledBrightness2;
+int doubleTapCounter;
+bool checkDoubleTap;
+bool pausePlayback;
 
 // Tremolo
 Tremolo tremolo;
@@ -45,11 +49,9 @@ float pTremDepth, pTremFreq;  // Previous values, for detecting changes from kno
 ReverbSc  verb;
 float pReverbTime;          // Previous values, for detecting changes from knob
 
-
 // Delay
 #define MAX_DELAY static_cast<size_t>(48000 * 1.f) // 1 second max delay
 DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delayLine;
-
 
 struct delay
 {
@@ -129,7 +131,6 @@ void changeModel()
         dense.setWeights(model_collection[modelIndex].lin_weight);
         dense.setBias(model_collection[modelIndex].lin_bias.data());
         model.reset();
-
     }
 }
 
@@ -157,8 +158,6 @@ void UpdateButtons()
         }
     }
 
-
-
     //switch2 pressed
     if(hw.switches[Terrarium::FOOTSWITCH_2].RisingEdge())
     {
@@ -166,6 +165,37 @@ void UpdateButtons()
         led2.Set(looper.Recording() ? 0.0f : 1.0f); // Turn on LED when loop is playing but not recording
         if (!pswitches[3]) {
             looper.SetReverse(true);
+        }
+
+
+
+        // Start or end double tap timer
+        if (checkDoubleTap) {
+            // if second press comes before 0.75 seconds, pause playback
+            if (doubleTapCounter <= 1125) {
+                if (looper.Recording()) {  // Ensure looper is not recording when double tapped (in case it gets double tapped while recording)
+                    looper.TrigRecord();
+                }
+                pausePlayback = !pausePlayback;
+                if (pausePlayback) {        // Blink LED if paused, otherwise set to sawtooth wave for pulsing while recording
+                    led_osc2.SetWaveform(4); // WAVE_SIN = 0, WAVE_TRI = 1, WAVE_SAW = 2, WAVE_RAMP = 3, WAVE_SQUARE = 4
+                } else {
+                    led_osc2.SetWaveform(1); 
+                }
+
+            }
+            //doubleTapCounter = 0;
+            //checkDoubleTap = false;  //TODO Figure out what happens if tapped 3+ times in under 0.75 seconds
+        } else {
+            checkDoubleTap = true;
+        }
+    }
+
+    if (checkDoubleTap) {
+        doubleTapCounter += 1;          // Increment by 1 (48000 * 0.75)/blocksize = 1125   (blocksize is 32)
+        if (doubleTapCounter > 1125) {  // If timer goes beyond 0.75 seconds, stop double tap checking
+            doubleTapCounter = 0;
+            checkDoubleTap = false;
         }
     }
 
@@ -212,23 +242,10 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
     hw.ProcessDigitalControls();
 
     UpdateButtons();
-
-    if (looper.Recording()) {
-        led2.Set(led_osc.Process()*0.5 + 0.5);  // Pulse the LED when recording
-    } 
-   
-    if (effects_only_mode && !bypass) {
-        led1.Set(led_osc.Process()*0.5 + 0.5);  // Pulse the LED when in effects only mode and not bypassed (opposite pulse of looper led)
-        //led1.Set(1.0 - led_osc.Process() * 0.5 + 0.5);
-    }
-
     UpdateSwitches();
 
-    led1.Update();
-    led2.Update();
-
-    float input_arr[2] = { 0.0, 0.0 };
-    //float input_arr[1] = { 0.0 };    // Neural Net Input
+    //float input_arr[2] = { 0.0, 0.0 };
+    float input_arr[1] = { 0.0 };    // Neural Net Input
     float sendl, sendr, wetl, wetr;  // Reverb Inputs/Outputs
     float delay_out;
 
@@ -246,7 +263,7 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
     // REVERB //
     if ((pReverbTime != vReverbTime))
     {
-        if (vReverbTime < 0.02) { // if knob < 2%, set reverb to 0
+        if (vReverbTime < 0.02) { // if knob < 2%, set reverb to 0 // TODO if mix is full wet or close, audible jump from reverb off to 0.5, maybe ramp it?
             verb.SetFeedback(0.0);
         } else {
             verb.SetFeedback(vReverbTime * 0.5 + 0.5); // Reverb time range 0.5 to 1.0
@@ -270,7 +287,7 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
 
         if (pTremFreq != vdelayTime_tremFreq)
         {
-            tremolo.SetFreq(vdelayTime_tremFreq * 12.0 + 0.5); // change range from 0-1 to 0.5 - 12.5 Hz
+            tremolo.SetFreq(vdelayTime_tremFreq * 12.0 + 0.5); // range from 0.5 - 12.5 Hz
             pTremFreq = vdelayTime_tremFreq;
         }
 
@@ -290,12 +307,17 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
     for(size_t i = 0; i < size; i++)
     {
 
+        ledBrightness = led_osc.Process();
+        ledBrightness2 = led_osc2.Process();
+
         // Process your signal here
         if(bypass)
         {
             /// Process Looper // Able to use looper when in bypass mode // 
-            float loop_out;
-            loop_out = looper.Process(in[0][i]);
+            float loop_out = 0.0;
+            if (!pausePlayback) {
+                loop_out = looper.Process(in[0][i]);
+            }
             out[0][i] = in[0][i] + loop_out;
         }
         else
@@ -331,11 +353,32 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
             final_effects_mix *= out_level;                           // Set output level
 
             /// Process Looper //
-            float loop_out;
-            loop_out = looper.Process(final_effects_mix);
+            float loop_out = 0.0;
+            if (!pausePlayback) {
+                loop_out = looper.Process(final_effects_mix);
+            } 
+
             out[0][i] = loop_out + final_effects_mix;
+
         }
     }
+
+    // Handle Pulsing LEDs
+    if (looper.Recording()) {
+        led2.Set(ledBrightness2*0.5 + 0.5);       // Pulse the LED when recording
+    } 
+
+    if (pausePlayback) {
+        led2.Set(ledBrightness2*2.0);       // Blink the LED when paused
+    }
+   
+    if (effects_only_mode && !bypass) {
+        led1.Set(ledBrightness*0.5 + 0.5);  // Pulse the 1st LED when in effects only mode and not bypassed
+        //led1.Set(1.0 - led_osc.Process() * 0.5 + 0.5);
+    }
+
+    led1.Update();
+    led2.Update();
 }
 
 
@@ -350,16 +393,24 @@ int main(void)
     verb.Init(samplerate);
 
     setupWeights();
-    //hw.SetAudioBlockSize(4);  // TODO try lower block sizes for better latency
-    hw.SetAudioBlockSize(32);
+    hw.SetAudioBlockSize(32);  // 32 was about the lowest I could go (24 too low) for NN processing to keep up
 
     looper.Init(buf, MAX_SIZE);
     looper.SetMode(Looper::Mode::NORMAL);
     led_osc.Init(samplerate);
-    led_osc.SetFreq(12);  // Is this right? led updated every buffer, so 1000 times per second instead of 48k as expected, so setting to 48hz would show up as 1Hz?
-    led_osc.SetWaveform(1);
+    led_osc.SetFreq(1.0);
+    led_osc.SetWaveform(1); // WAVE_SIN = 0, WAVE_TRI = 1, WAVE_SAW = 2, WAVE_RAMP = 3, WAVE_SQUARE = 4
+    ledBrightness = 0.0;
 
-    //pressCount = 0;
+    led_osc2.Init(samplerate);
+    led_osc2.SetFreq(1.5);
+    led_osc2.SetWaveform(1); // WAVE_SIN = 0, WAVE_TRI = 1, WAVE_SAW = 2, WAVE_RAMP = 3, WAVE_SQUARE = 4
+    ledBrightness2 = 0.0;
+
+    pausePlayback = false;
+    doubleTapCounter = 0;
+    checkDoubleTap = false;
+
     switch1_hold = false;
 
     pswitches[0]= true;
@@ -372,7 +423,7 @@ int main(void)
     switches[2]= Terrarium::SWITCH_3;
     switches[3]= Terrarium::SWITCH_4;
 
-    Gain.Init(hw.knob[Terrarium::KNOB_1], 0.0f, 2.0f, Parameter::LINEAR);
+    Gain.Init(hw.knob[Terrarium::KNOB_1], 0.1f, 2.5f, Parameter::LINEAR);
     Mix.Init(hw.knob[Terrarium::KNOB_2], 0.0f, 1.0f, Parameter::LINEAR);
     Level.Init(hw.knob[Terrarium::KNOB_3], 0.0f, 1.0f, Parameter::LINEAR); 
     reverbTime.Init(hw.knob[Terrarium::KNOB_4], 0.0f, 1.0f, Parameter::LINEAR);
@@ -393,7 +444,7 @@ int main(void)
     tremolo.SetWaveform(0);   // WAVE_SIN = 0, WAVE_TRI = 1, WAVE_SAW = 2, WAVE_RAMP = 3, WAVE_SQUARE = 4
 
     verb.SetFeedback(0.0);
-    verb.SetLpFreq(9000.0);
+    verb.SetLpFreq(9000.0);  // TODO Experiment with freq value, what sounds best?
 
     delayLine.Init();
     delay1.del = &delayLine;
