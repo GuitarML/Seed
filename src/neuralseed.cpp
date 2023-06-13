@@ -25,29 +25,29 @@ bool            switch1_hold;
 
 Led led1, led2;
 
-float     mix_amp;
-float     mix_effects;
+float           mix_amp;
+float           mix_effects;
 
 // Looper Parameters
-Looper looper;
 #define MAX_SIZE (48000 * 60 * 4) // 4 minutes of floats at 48 khz
 float DSY_SDRAM_BSS buf[MAX_SIZE];
-Oscillator led_osc; // For pulsing the led when recording
-float ledBrightness;
-Oscillator led_osc2; // For pulsing the led when recording
-float ledBrightness2;
-int doubleTapCounter;
-bool checkDoubleTap;
-bool pausePlayback;
+Looper          looper;
+Oscillator      led_osc; // For pulsing the led when in effects-only mode
+float           ledBrightness;
+Oscillator      led_osc2; // For pulsing the led when recording / paused playback
+float           ledBrightness2;
+int             doubleTapCounter;
+bool            checkDoubleTap;
+bool            pausePlayback;
 
 // Tremolo
-Tremolo tremolo;
-int waveform;
-float pTremDepth, pTremFreq;  // Previous values, for detecting changes from knob
+Tremolo         tremolo;
+int             waveform;
+float           pTremDepth, pTremFreq;  // Previous values, for detecting changes from knob
 
 // Reverb
-ReverbSc  verb;
-float pReverbTime;          // Previous values, for detecting changes from knob
+ReverbSc        verb;
+float           pReverbTime;          // Previous values, for detecting changes from knob
 
 // Delay
 #define MAX_DELAY static_cast<size_t>(48000 * 1.f) // 1 second max delay
@@ -78,11 +78,10 @@ struct delay
     }
 };
 
-delay delay1;
+delay             delay1;
 
 
-// These are each of the Neural Model options.
-// GRU (Gated Recurrent Unit) networks with input sizes ranging 1 - 4.
+// Neural Network Model
 // Currently only using snapshot models, they tend to sound better and 
 //   we can use input level as gain.
 
@@ -121,7 +120,6 @@ void changeModel()
         return;
     } else {
         modelIndex = modelIndex_temp;
-
         auto& gru = (model).template get<0>();
         auto& dense = (model).template get<1>();
         modelInSize = 1;
@@ -150,18 +148,17 @@ void UpdateButtons()
         }
     }
 
+    // Toggle Effects-Only mode (neural model disabled) by holding down the left footswitch
     if(hw.switches[Terrarium::FOOTSWITCH_1].TimeHeldMs() >= 1000 && !bypass && !switch1_hold) { 
         effects_only_mode = !effects_only_mode;
-        switch1_hold = true;  // This is to make sure effects_only_mode is only toggled once
+        switch1_hold = true;                     // This is to make sure effects_only_mode is only toggled once
         if (!effects_only_mode) {
             led1.Set(bypass ? 0.0f : 1.0f);
         }
     }
 
-    // Looper quirks to fix TODO: if you triple press pause, then double press to unpause, LED is off, but in playback mode
-    //        If you hold to clear while pause is on, when unpaused, goes through one loop and then stops
 
-    //switch2 pressed
+    // Looper footswitch pressed (start/stop recording, doubletap to pause/unpause playback)
     if(hw.switches[Terrarium::FOOTSWITCH_2].RisingEdge())
     {
         if (!pausePlayback) {
@@ -177,8 +174,8 @@ void UpdateButtons()
 
         // Start or end double tap timer
         if (checkDoubleTap) {
-            // if second press comes before 0.75 seconds, pause playback
-            if (doubleTapCounter <= 1125) {
+            // if second press comes before 1.0 seconds, pause playback
+            if (doubleTapCounter <= 1000) {
                 if (looper.Recording()) {  // Ensure looper is not recording when double tapped (in case it gets double tapped while recording)
                     looper.TrigRecord();
                 }
@@ -198,20 +195,19 @@ void UpdateButtons()
     }
 
     if (checkDoubleTap) {
-        doubleTapCounter += 1;          // Increment by 1 (48000 * 0.75)/blocksize = 1125   (blocksize is 32)
-        if (doubleTapCounter > 1125) {  // If timer goes beyond 0.75 seconds, stop double tap checking
+        doubleTapCounter += 1;          // Increment by 1 (48000 * 0.75)/blocksize = 1000   (blocksize is 48)
+        if (doubleTapCounter > 1000) {  // If timer goes beyond 1.0 seconds, stop double tap checking
             doubleTapCounter = 0;
             checkDoubleTap = false;
         }
     }
 
-    // If switch2 is held, clear the looper and turn off LED      TODO: Make LED blink twice when cleared
+    // If switch2 is held, clear the looper and turn off LED
     if(hw.switches[Terrarium::FOOTSWITCH_2].TimeHeldMs() >= 1000)
     {
         pausePlayback = false;
         led_osc2.SetWaveform(1); 
         looper.Clear();
-        //led2.Set(looper.Recording() ? 1.0f : 0.0f); // TODO Is this right?
         led2.Set(0.0f);
     } 
 }
@@ -253,7 +249,6 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
     UpdateButtons();
     UpdateSwitches();
 
-    //float input_arr[2] = { 0.0, 0.0 };
     float input_arr[1] = { 0.0 };    // Neural Net Input
     float sendl, sendr, wetl, wetr;  // Reverb Inputs/Outputs
     float delay_out;
@@ -374,16 +369,15 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
 
     // Handle Pulsing LEDs
     if (looper.Recording()) {
-        led2.Set(ledBrightness2*0.5 + 0.5);       // Pulse the LED when recording
+        led2.Set(ledBrightness2 * 0.5 + 0.5);       // Pulse the LED when recording
     } 
 
     if (pausePlayback) {
-        led2.Set(ledBrightness2*2.0);       // Blink the LED when paused
+        led2.Set(ledBrightness2 * 2.0);             // Blink the LED when paused
     }
    
     if (effects_only_mode && !bypass) {
-        led1.Set(ledBrightness*0.5 + 0.5);  // Pulse the 1st LED when in effects only mode and not bypassed
-        //led1.Set(1.0 - led_osc.Process() * 0.5 + 0.5);
+        led1.Set(ledBrightness * 0.5 + 0.5);  // Pulse the 1st LED when in effects only mode and not bypassed
     }
 
     led1.Update();
@@ -402,7 +396,7 @@ int main(void)
     verb.Init(samplerate);
 
     setupWeights();
-    //hw.SetAudioBlockSize(32);  // 32 was about the lowest I could go (24 too low) for NN processing to keep up
+    //hw.SetAudioBlockSize(32);  // 32 has hiccups in with certain settings, using default 48
 
     looper.Init(buf, MAX_SIZE);
     looper.SetMode(Looper::Mode::NORMAL);
@@ -413,7 +407,7 @@ int main(void)
 
     led_osc2.Init(samplerate);
     led_osc2.SetFreq(1.5);
-    led_osc2.SetWaveform(1); // WAVE_SIN = 0, WAVE_TRI = 1, WAVE_SAW = 2, WAVE_RAMP = 3, WAVE_SQUARE = 4
+    led_osc2.SetWaveform(1);
     ledBrightness2 = 0.0;
 
     pausePlayback = false;
