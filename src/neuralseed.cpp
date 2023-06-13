@@ -158,16 +158,22 @@ void UpdateButtons()
         }
     }
 
+    // Looper quirks to fix TODO: if you triple press pause, then double press to unpause, LED is off, but in playback mode
+    //        If you hold to clear while pause is on, when unpaused, goes through one loop and then stops
+
     //switch2 pressed
     if(hw.switches[Terrarium::FOOTSWITCH_2].RisingEdge())
     {
-        looper.TrigRecord();
-        led2.Set(looper.Recording() ? 0.0f : 1.0f); // Turn on LED when loop is playing but not recording
-        if (!pswitches[3]) {
-            looper.SetReverse(true);
+        if (!pausePlayback) {
+            looper.TrigRecord();
+            if (!looper.Recording()) {  // Turn on LED if not recording and in playback
+                led2.Set(1.0f);
+            }
+            //led2.Set(looper.Recording() ? 0.0f : 1.0f); // Turn on LED when loop is playing but not recording
+            if (!pswitches[3]) {
+                looper.SetReverse(true);
+            }
         }
-
-
 
         // Start or end double tap timer
         if (checkDoubleTap) {
@@ -182,10 +188,10 @@ void UpdateButtons()
                 } else {
                     led_osc2.SetWaveform(1); 
                 }
-
+                doubleTapCounter = 0;    // reset double tap here also to prevent weird behaviour when triple clicked
+                checkDoubleTap = false;  //TODO Figure out what happens if tapped 3+ times in under 0.75 seconds 
+                led2.Set(1.0f);  // I dont know..
             }
-            //doubleTapCounter = 0;
-            //checkDoubleTap = false;  //TODO Figure out what happens if tapped 3+ times in under 0.75 seconds
         } else {
             checkDoubleTap = true;
         }
@@ -202,9 +208,12 @@ void UpdateButtons()
     // If switch2 is held, clear the looper and turn off LED      TODO: Make LED blink twice when cleared
     if(hw.switches[Terrarium::FOOTSWITCH_2].TimeHeldMs() >= 1000)
     {
+        pausePlayback = false;
+        led_osc2.SetWaveform(1); 
         looper.Clear();
-        led2.Set(looper.Recording() ? 1.0f : 0.0f); 
-    }
+        //led2.Set(looper.Recording() ? 1.0f : 0.0f); // TODO Is this right?
+        led2.Set(0.0f);
+    } 
 }
 
 void UpdateSwitches()
@@ -343,7 +352,7 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
             sendr = sendl;
             verb.Process(sendl, sendr, &wetl, &wetr);
 
-            final_effects = wetl + delay_out;
+            final_effects = (wetl + wetr) / 2 + delay_out;
 
             // Process Wet/Dry Effects Mix //
             float final_effects_mix;
@@ -393,7 +402,7 @@ int main(void)
     verb.Init(samplerate);
 
     setupWeights();
-    hw.SetAudioBlockSize(32);  // 32 was about the lowest I could go (24 too low) for NN processing to keep up
+    //hw.SetAudioBlockSize(32);  // 32 was about the lowest I could go (24 too low) for NN processing to keep up
 
     looper.Init(buf, MAX_SIZE);
     looper.SetMode(Looper::Mode::NORMAL);
