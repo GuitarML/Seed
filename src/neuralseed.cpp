@@ -19,6 +19,9 @@ unsigned int    modelIndex;
 bool            pswitches[4];
 int             switches[4];
 float           nnLevelAdjust;
+bool            isEaster;
+int             egg;
+int             indexMod;
 
 bool            effects_only_mode;
 bool            switch1_hold;
@@ -50,7 +53,7 @@ ReverbSc        verb;
 float           pReverbTime;          // Previous values, for detecting changes from knob
 
 // Delay
-#define MAX_DELAY static_cast<size_t>(48000 * 1.f) // 1 second max delay
+#define MAX_DELAY static_cast<size_t>(48000 * 2.f + 1000) // 2 second max delay, 1000 extra samples for safety
 DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delayLine;
 
 struct delay
@@ -104,16 +107,16 @@ void changeModel()
     unsigned int modelIndex_temp = 0;
 
     if (pswitches[0] == true && pswitches[1] == true ) {
-        modelIndex_temp = 0;
+        modelIndex_temp = 0 + indexMod;
         nnLevelAdjust = 1.0;
     } else if (pswitches[0] == false && pswitches[1] == true) {
-        modelIndex_temp = 1;
+        modelIndex_temp = 1 + indexMod;
         nnLevelAdjust = 1.0;
     } else if (pswitches[0] == true && pswitches[1] == false) {
-        modelIndex_temp = 2;
+        modelIndex_temp = 2 + indexMod;
         nnLevelAdjust = 1.0;
     } else if (pswitches[0] == false && pswitches[1] == false) {
-        modelIndex_temp = 3;
+        modelIndex_temp = 3 + indexMod;
         nnLevelAdjust = 0.6;
     }
     if ( modelIndex_temp > (model_collection.size() - 1) ) {  // If model is not available, don't change model
@@ -212,6 +215,26 @@ void UpdateButtons()
     } 
 }
 
+void isItEaster(int m)
+{
+    if (Level.Process() < 0.02 ) {
+        if (egg < 4 && m == 0) {
+            egg += 1;
+            return;
+        } else if (egg > 3 && egg < 8 && m == 1) {
+            egg += 1;
+            if (egg == 7) {
+                egg = 0;
+                isEaster = !isEaster;
+                indexMod = isEaster ? 4 : 0;
+            }
+            return;
+        } else {
+            egg = 0;
+        }
+    }
+}
+
 void UpdateSwitches()
 {
     // Select appropriate model based on 2 switch positions ////
@@ -220,7 +243,9 @@ void UpdateSwitches()
         if (hw.switches[switches[i]].Pressed() != pswitches[i]) {
             pswitches[i] = hw.switches[switches[i]].Pressed();
             model_changed = true;
+            isItEaster(i);
         }
+
     if (model_changed) {    
         changeModel();
     }
@@ -270,7 +295,7 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
         if (vReverbTime < 0.02) { // if knob < 2%, set reverb to 0 // TODO if mix is full wet or close, audible jump from reverb off to 0.5, maybe ramp it?
             verb.SetFeedback(0.0);
         } else {
-            verb.SetFeedback(vReverbTime * 0.5 + 0.5); // Reverb time range 0.5 to 1.0
+            verb.SetFeedback(vReverbTime * 0.4 + 0.6); // Reverb time range 0.5 to 1.0
         }
         pReverbTime = vReverbTime;
     }
@@ -278,12 +303,19 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
     // DELAY //
     if (pswitches[2] == true) {
 
-        if (vdelayTime_tremFreq < 0.02) {   // if knob < 2%, set delay to inactive
+        if (vdelayTime_tremFreq < 0.01) {   // if knob < 1%, set delay to inactive
             delay1.active = false;
         } else {
             delay1.active = true;
         }
-        delay1.delayTarget = 2400 + vdelayTime_tremFreq * 45600 ; // in samples 50ms to 1 second  // Note: changing delay time with heavy reverb creates a cool modulation effect
+
+        // From 0 to 75% knob is 0 to 1 second, 75% to 100% knob is 1 to 2 seconds (for more control over 1 second range)
+        if (vdelayTime_tremFreq <= 0.75) {
+            delay1.delayTarget = 2400 + vdelayTime_tremFreq * 60800; // in samples 50ms to 1 second range  // Note: changing delay time with heavy reverb creates a cool modulation effect
+        } else {
+            delay1.delayTarget = 48000 + (vdelayTime_tremFreq - 0.75) * 192000; // 1 second to 2 second range
+        }
+
         delay1.feedback = vdelayFdbk_tremDepth;
     
     // TREMOLO //
@@ -437,6 +469,9 @@ int main(void)
     modelIndex = 0;
     changeModel();
     nnLevelAdjust = 1.0;
+    isEaster = false;
+    egg = 0;
+    indexMod = 0;
 
     // Initialize & set params for mixers 
     mix_effects = 0.5;
@@ -447,7 +482,7 @@ int main(void)
     tremolo.SetWaveform(0);   // WAVE_SIN = 0, WAVE_TRI = 1, WAVE_SAW = 2, WAVE_RAMP = 3, WAVE_SQUARE = 4
 
     verb.SetFeedback(0.0);
-    verb.SetLpFreq(9000.0);  // TODO Experiment with freq value, what sounds best?
+    verb.SetLpFreq(10000.0);  // TODO Experiment with freq value, what sounds best? //was 9000, trying 10000 which is default
 
     delayLine.Init();
     delay1.del = &delayLine;
