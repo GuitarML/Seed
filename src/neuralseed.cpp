@@ -111,13 +111,10 @@ void changeModel()
         nnLevelAdjust = 1.0;
     } else if (pswitches[0] == false && pswitches[1] == true) {
         modelIndex_temp = 1 + indexMod;
-        nnLevelAdjust = 1.0;
     } else if (pswitches[0] == true && pswitches[1] == false) {
         modelIndex_temp = 2 + indexMod;
-        nnLevelAdjust = 1.0;
     } else if (pswitches[0] == false && pswitches[1] == false) {
         modelIndex_temp = 3 + indexMod;
-        nnLevelAdjust = 0.6;
     }
     if ( modelIndex_temp > (model_collection.size() - 1) ) {  // If model is not available, don't change model
         return;
@@ -132,6 +129,8 @@ void changeModel()
         dense.setWeights(model_collection[modelIndex].lin_weight);
         dense.setBias(model_collection[modelIndex].lin_bias.data());
         model.reset();
+
+        nnLevelAdjust = model_collection[modelIndex].levelAdjust;
     }
 }
 
