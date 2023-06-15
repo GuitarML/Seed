@@ -32,7 +32,7 @@ float           mix_amp;
 float           mix_effects;
 
 // Looper Parameters
-#define MAX_SIZE (48000 * 60 * 4) // 4 minutes of floats at 48 khz
+#define MAX_SIZE (48000 * 60 * 5) // 5 minutes of floats at 48 khz
 float DSY_SDRAM_BSS buf[MAX_SIZE];
 Looper          looper;
 Oscillator      led_osc; // For pulsing the led when in effects-only mode
@@ -291,10 +291,12 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
     // REVERB //
     if ((pReverbTime != vReverbTime))
     {
-        if (vReverbTime < 0.02) { // if knob < 2%, set reverb to 0 // TODO if mix is full wet or close, audible jump from reverb off to 0.5, maybe ramp it?
+        if (vReverbTime < 0.01) { // if knob < 1%, set reverb to 0
             verb.SetFeedback(0.0);
+        } else if (vReverbTime >= 0.01 && vReverbTime <= 0.1) {
+            verb.SetFeedback(vReverbTime * 6.4 ); // Reverb time range 0.0 to 0.6 for 1% to 10% knob turn (smooth ramping to useful reverb time values, i.e. 0.6 to 1)
         } else {
-            verb.SetFeedback(vReverbTime * 0.4 + 0.6); // Reverb time range 0.5 to 1.0
+            verb.SetFeedback(vReverbTime * 0.4 + 0.6); // Reverb time range 0.6 to 1.0
         }
         pReverbTime = vReverbTime;
     }
