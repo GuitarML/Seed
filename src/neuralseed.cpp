@@ -25,6 +25,8 @@ int             indexMod;
 
 bool            effects_only_mode;
 bool            switch1_hold;
+bool            trem_start;
+int             tcount;
 
 Led led1, led2;
 
@@ -320,7 +322,7 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
         delay1.feedback = vdelayFdbk_tremDepth;
     
     // TREMOLO //
-    } else {
+    } else if (pswitches[2] == false && trem_start == true) {
 
         if (pTremFreq != vdelayTime_tremFreq)
         {
@@ -364,7 +366,7 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
 
             // Process Neural Net Model //
             if (effects_only_mode) {
-                ampOut = input_arr[0] * 1.5; // apply gain level to dry signal and slight boost to match NN model levels
+                ampOut = input_arr[0] * 1.7; // apply gain level to dry signal and slight boost to match NN model levels
             } else {
                
                 ampOut = model.forward (input_arr) + input_arr[0];   // Run Model and add Skip Connection; CHANGE FROM v0.1, was calculating skip wrong, should have also added input gain, fixed here
@@ -396,6 +398,13 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
             } 
 
             out[0][i] = loop_out + final_effects_mix;
+
+            if (trem_start == false) {  // workaround for tremolo initializing with switch3 up on power up
+                tcount += 1;
+                if (tcount > 10) {
+                    trem_start = true;
+                }
+            }
 
         }
     }
@@ -481,6 +490,8 @@ int main(void)
     tremolo.SetFreq(3.0);
     tremolo.SetDepth(0.0); 
     tremolo.SetWaveform(0);   // WAVE_SIN = 0, WAVE_TRI = 1, WAVE_SAW = 2, WAVE_RAMP = 3, WAVE_SQUARE = 4
+    trem_start = false;
+    tcount = 0;
 
     verb.SetFeedback(0.0);
     verb.SetLpFreq(10000.0);  // TODO Experiment with freq value, what sounds best? //was 9000, trying 10000 which is default
