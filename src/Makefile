@@ -1,10 +1,10 @@
 # Project Name
-TARGET = neuralseed
+TARGET = seed
 
 # APP_TYPE = BOOT_SRAM
 
 # Sources
-CPP_SOURCES = neuralseed.cpp
+CPP_SOURCES = seed.cpp
 
 # Library Locations
 LIBDAISY_DIR = ../libDaisy
