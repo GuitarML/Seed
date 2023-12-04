@@ -4,6 +4,7 @@
 #include <RTNeural/RTNeural.h>
 
 // Model Weights (edit this file to add model weights trained with Colab script)
+//    The models must be GRU (gated recurrent unit) with hidden size = 9, snapshot models (not condidtioned on a parameter)
 #include "all_model_data_gru9_4count.h"
 
 using namespace daisy;
@@ -22,6 +23,8 @@ float           nnLevelAdjust;
 bool            isEaster;
 int             egg;
 int             indexMod;
+
+float dryMix, wetMix;
 
 bool            effects_only_mode;
 bool            switch1_hold;
@@ -48,14 +51,20 @@ bool            pausePlayback;
 // Tremolo
 Tremolo         tremolo;
 int             waveform;
-float           pTremDepth, pTremFreq;  // Previous values, for detecting changes from knob
+
+//float           pTremDepth, pTremFreq, pReverbTime;
+// Note: I originally used "p" previous params for attemping to detect changes in the knob,
+//       and only calculating new setting when the param changed. However, I realized that
+//       due to normal (very small) variations in the potentiometer readings even when the knob wasn't moved,
+//       it was calculating new params each block anyway. To properly detect changes in the knob readings, you 
+//       need to account for a tolerance in the potentiometer readings. Since the re-calculations
+//       never affected the real-time processing, I simply removed these "previous" params. 
 
 // Reverb
 ReverbSc        verb;
-float           pReverbTime;          // Previous values, for detecting changes from knob
 
 // Delay
-#define MAX_DELAY static_cast<size_t>(48000 * 2.f + 1000) // 2 second max delay, 1000 extra samples for safety
+#define MAX_DELAY static_cast<size_t>(48000 * 2.f + 1000) // 2 second max delay
 DelayLine<float, MAX_DELAY> DSY_SDRAM_BSS delayLine;
 
 struct delay
@@ -97,9 +106,9 @@ RTNeural::ModelT<float, 1, 1,
 // Notes: With default settings, GRU 10 is max size currently able to run on Daisy Seed
 //        - Parameterized 1-knob GRU 10 is max, GRU 8 with effects is max
 //        - Parameterized 2-knob/3-knob at GRU 8 is max
-//        - With multi effect (reverb, etc.) added GRU 9 is recommended to allow for processing space
+//        - With multi effect (reverb, etc.) added GRU 9 is recommended to allow room for processing of other effects
 //        - These models should be trained using 48kHz audio data, since Daisy uses 48kHz by default.
-//             Models trained with other samplerates, or running Daisy at a different samplerate will sound off.
+//             Models trained with other samplerates, or running Daisy at a different samplerate will sound different.
 
 // Loads a new model based on the first two switch positions, total of 4 possible combinations
 // Models 0 -> 3 
@@ -184,14 +193,14 @@ void UpdateButtons()
                     looper.TrigRecord();
                 }
                 pausePlayback = !pausePlayback;
-                if (pausePlayback) {        // Blink LED if paused, otherwise set to sawtooth wave for pulsing while recording
+                if (pausePlayback) {        // Blink LED if paused, otherwise set to triangle wave for pulsing while recording
                     led_osc2.SetWaveform(4); // WAVE_SIN = 0, WAVE_TRI = 1, WAVE_SAW = 2, WAVE_RAMP = 3, WAVE_SQUARE = 4
                 } else {
                     led_osc2.SetWaveform(1); 
                 }
                 doubleTapCounter = 0;    // reset double tap here also to prevent weird behaviour when triple clicked
-                checkDoubleTap = false;  //TODO Figure out what happens if tapped 3+ times in under 0.75 seconds 
-                led2.Set(1.0f);  // I dont know..
+                checkDoubleTap = false;
+                led2.Set(1.0f);
             }
         } else {
             checkDoubleTap = true;
@@ -282,26 +291,36 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
     // Get current knob parameters ////////////////////
     float in_level = Gain.Process();
     float out_level = Level.Process(); 
-    float mix_effects = Mix.Process();
+    float vmix = Mix.Process();
 
     float vReverbTime = reverbTime.Process();
     float vdelayTime_tremFreq = delayTime_tremFreq.Process();
     float vdelayFdbk_tremDepth = delayFdbk_tremDepth.Process();
 
+    // Calculate mix parameters
+    //    A cheap mostly energy constant crossfade from SignalSmith Blog
+    //    https://signalsmith-audio.co.uk/writing/2021/cheap-energy-crossfade/
+    float x2 = 1.0 - vmix;
+    float A = vmix*x2;
+    float B = A * (1.0 + 1.4186 * A);
+    float C = B + vmix;
+    float D = B + x2;
+
+    wetMix = C * C;
+    dryMix = D * D;
+
     // Check for changes in effects knobs /////////
 
     // REVERB //
-    if ((pReverbTime != vReverbTime))
-    {
-        if (vReverbTime < 0.01) { // if knob < 1%, set reverb to 0
-            verb.SetFeedback(0.0);
-        } else if (vReverbTime >= 0.01 && vReverbTime <= 0.1) {
-            verb.SetFeedback(vReverbTime * 6.4 ); // Reverb time range 0.0 to 0.6 for 1% to 10% knob turn (smooth ramping to useful reverb time values, i.e. 0.6 to 1)
-        } else {
-            verb.SetFeedback(vReverbTime * 0.4 + 0.6); // Reverb time range 0.6 to 1.0
-        }
-        pReverbTime = vReverbTime;
+
+    if (vReverbTime < 0.01) { // if knob < 1%, set reverb to 0
+        verb.SetFeedback(0.0);
+    } else if (vReverbTime >= 0.01 && vReverbTime <= 0.1) {
+        verb.SetFeedback(vReverbTime * 6.4 ); // Reverb time range 0.0 to 0.6 for 1% to 10% knob turn (smooth ramping to useful reverb time values, i.e. 0.6 to 1)
+    } else {
+        verb.SetFeedback(vReverbTime * 0.4 + 0.6); // Reverb time range 0.6 to 1.0
     }
+
 
     // DELAY //
     if (pswitches[2] == true) {
@@ -324,17 +343,8 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
     // TREMOLO //
     } else if (pswitches[2] == false && trem_start == true) {
 
-        if (pTremFreq != vdelayTime_tremFreq)
-        {
-            tremolo.SetFreq(vdelayTime_tremFreq * 12.0 + 0.5); // range from 0.5 - 12.5 Hz
-            pTremFreq = vdelayTime_tremFreq;
-        }
-
-        if (pTremDepth != vdelayFdbk_tremDepth)
-        {
-            tremolo.SetDepth(vdelayFdbk_tremDepth);
-            pTremDepth = vdelayFdbk_tremDepth;
-        }
+        tremolo.SetFreq(vdelayTime_tremFreq * 12.0 + 0.5); // range from 0.5 - 12.5 Hz
+        tremolo.SetDepth(vdelayFdbk_tremDepth);
     }
 
     // Loop through the current audio block and process all effects ////////
@@ -370,7 +380,7 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
             } else {
                
                 ampOut = model.forward (input_arr) + input_arr[0];   // Run Model and add Skip Connection; CHANGE FROM v0.1, was calculating skip wrong, should have also added input gain, fixed here
-                ampOut *= nnLevelAdjust; // Manually adjust model volume for quiet or loud models TODO: move to Model parameter
+                ampOut *= nnLevelAdjust;
             }
             
             // Process Delay
@@ -382,11 +392,13 @@ static void AudioCallback(AudioHandle::InputBuffer  in,
             sendr = sendl;
             verb.Process(sendl, sendr, &wetl, &wetr);
 
-            final_effects = (wetl + wetr) / 2 + delay_out;
+            final_effects = (wetl + wetr) / 2 + delay_out; 
+            // Note on the reverb: I noticed that the left and right wet outputs using different delay lines (for stereo effect).
+            //                     Since Seed is mono, I'm adding wetl and wetr together and dividing by two to get the full effect in mono
+            //                     at the appropriate volume level (divide by 2).
 
             // Process Wet/Dry Effects Mix //
-            float final_effects_mix;
-            final_effects_mix = ampOut * (1.0- mix_effects) + final_effects * mix_effects; // Mix amp out with delay/reverb
+            float final_effects_mix = ampOut * dryMix + final_effects * wetMix; // Mix amp out with delay/reverb
 
             final_effects_mix = tremolo.Process(final_effects_mix);   // Process Tremolo on total output (not controlled by effects mix, depth control acts as effect level)
             final_effects_mix *= out_level;                           // Set output level
