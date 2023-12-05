@@ -8,6 +8,8 @@ musical experimentation.
 
 Check out the [YouTube Demo!](https://www.youtube.com/watch?v=G6pMcl99Tug)
 
+![app](https://github.com/GuitarML/Seed/blob/main/docs/seed_pic.jpg)
+
 Neural Modeling is a technique that uses neural networks to
 replicate the sound of real analog devices. Seed uses this
 technology to recreate three classic amplifiers and one overdrive pedal (and maybe a few easter eggs!).
@@ -16,7 +18,7 @@ All models were trained using the [NeuralSeed](https://github.com/GuitarML/Neura
 - 9v DC Power (Center Negative)
 - Input / Output - 1/4" Mono
 
-Read the [Documentation]() for a rundown of all the controls.
+Read the [Documentation](https://github.com/GuitarML/Seed/blob/main/docs/seed_doc_scaled%2090.pdf) for a rundown of all the controls.
 
 If you already have a Terrarium pedal built, head to the [Releases](), download the .bin file, flash to the Daisy Seed and start rockin!
 
@@ -60,7 +62,7 @@ make program
 ## Note from the Author
 
 The Seed pedal is my first attempt at a fully featured digital effects pedal comparable to other commercial effects. 
-I build and sell them for around $200 from the [GuitarML Pedals facebook page]() (reach out to me here and I may have a couple avaiable).
+I build and sell them for around $200 from the [GuitarML Pedals facebook page](https://www.facebook.com/profile.php?id=100089301889206) (reach out to me here and I may have a couple avaiable).
 Although selling these pedals is rewarding, it is much more fulfilling to me to spend my time creating new designs, 
 and open sourcing them so the DIY community to build and enjoy these for themselves. I love to encourage people to get their hands
 dirty with science and engineering, and guitar effects are a terrific way to get involved in so many diciplines - electronics,
