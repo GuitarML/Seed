@@ -64,7 +64,7 @@ $ make -C libDaisy
 $ cd src
 $ make
 ```
-As shown above, navigate to the Seed/src folder, and run '''make''' (after installing the Daisy Toolchain and building libDaisy and DaisySP libraries) to build the Seed.bin.
+As shown above, navigate to the Seed/src folder, and run ```make``` (after installing the Daisy Toolchain and building libDaisy and DaisySP libraries) to build the Seed.bin.
 
 Then flash your Seed pedal with the following commands (or use the [Electrosmith Web Programmer](https://electro-smith.github.io/Programmer/))
 ```
