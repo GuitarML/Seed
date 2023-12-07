@@ -4,7 +4,10 @@ Seed is a digital multi-effects pedal with neural modeling at
 its’ heart. It features Reverb, Delay, and Tremolo to further
 modify your sound. A five minute reversible looper rounds out
 this pedalboard-in-a-box for practice, performance, and
-musical experimentation.
+musical experimentation. This pedal is built using the [Terrarium](https://www.pedalpcb.com/product/pcb351/) platform
+from PedalPCB, so if you have one you can try out Seed without building
+new hardware! If you want a pre-drilled and UV printed enclosure for the complete Seed pedal, use the UV print pdf 
+along with the Tayda drill template included here to order one from Tayda.
 
 Check out the [YouTube Demo!](https://www.youtube.com/watch?v=G6pMcl99Tug)
 
@@ -13,7 +16,7 @@ Check out the [YouTube Demo!](https://www.youtube.com/watch?v=G6pMcl99Tug)
 Neural Modeling is a technique that uses neural networks to
 replicate the sound of real analog devices. Seed uses this
 technology to recreate three classic amplifiers and one overdrive pedal (and maybe a few easter eggs!).
-All models were trained using the [NeuralSeed](https://github.com/GuitarML/NeuralSeed) code.
+All models were trained using the "ns-capture" branch of the [Automated-GuitarAmpModelling]([https://github.com/GuitarML/NeuralSeed](https://github.com/GuitarML/Automated-GuitarAmpModelling/tree/ns-capture)) code.
 
 - 9v DC Power (Center Negative)
 - Input / Output - 1/4" Mono
@@ -39,6 +42,8 @@ and UV print pdf file. Follow the instructions on the Tayda website to do this.
 Custom drill service and UV printing can be purchased on the Tayda website.
 The original Seed pedal uses the "Cream" color powder coat, but feel free to experiment,
 the all-black UV print should show up well on light colors.
+
+IMPORTANT: If you use the Drill Template, double check that the hole diameters match your components. Especially for the LED's, which use the larger diameter hole for 5mm [LED Bezel](https://lovemyswitches.com/5mm-chrome-metal-led-bezel-bag-of-5/).
 
 ## Build the Software
 Head to the [Electro-Smith Wiki](https://github.com/electro-smith/DaisyWiki) to learn how to set up the Daisy environment on your computer.
