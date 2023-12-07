@@ -69,7 +69,7 @@ make program
 The Seed pedal is my first attempt at a fully featured digital effects pedal comparable to other commercial effects. 
 I build and sell them for around $200 from the [GuitarML Pedals facebook page](https://www.facebook.com/profile.php?id=100089301889206) (reach out to me here and I may have a couple avaiable).
 Although selling these pedals is rewarding, it is much more fulfilling to me to spend my time creating new designs, 
-and open sourcing them so the DIY community to build and enjoy these for themselves. I love to encourage people to get their hands
+and open sourcing them so the DIY community to build and enjoy these for themselves. I love encouraging people to get their hands
 dirty with science and engineering, and guitar effects are a terrific way to get involved in so many diciplines - electronics,
 software, mechanical, product design, art, and of course music. No matter what your interests are, I hope this project sparks your 
 curiosity and encourages you to create new and amazing things.
