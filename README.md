@@ -60,7 +60,7 @@ $ git submodule update --init --recursive
 $ make -C DaisySP
 $ make -C libDaisy
 
-# Build (after installing the Daisy Toolchain)
+# Build the Seed binary (after installing the Daisy Toolchain)
 $ cd src
 $ make
 ```
