@@ -48,12 +48,23 @@ IMPORTANT: If you use the Drill Template, double check that the hole diameters m
 ## Build the Software
 Head to the [Electro-Smith Wiki](https://github.com/electro-smith/DaisyWiki) to learn how to set up the Daisy environment on your computer.
 
-Build the daisy libraries with:
 ```
-make -C DaisySP
-make -C libDaisy
+# Clone the repository
+$ git clone https://github.com/GuitarML/Seed.git
+$ cd Seed
+
+# initialize and set up submodules
+$ git submodule update --init --recursive
+
+# Build the daisy libraries with (after installing the Daisy Toolchain):
+$ make -C DaisySP
+$ make -C libDaisy
+
+# Build (after installing the Daisy Toolchain)
+$ cd src
+$ make
 ```
-Navigate to the Seed/src folder, and run '''make''' (after installing the Daisy Toolchain) to build the Seed.bin.
+As shown above, navigate to the Seed/src folder, and run '''make''' (after installing the Daisy Toolchain and building libDaisy and DaisySP libraries) to build the Seed.bin.
 
 Then flash your Seed pedal with the following commands (or use the [Electrosmith Web Programmer](https://electro-smith.github.io/Programmer/))
 ```
