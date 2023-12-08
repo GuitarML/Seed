@@ -25,6 +25,7 @@ Read the [Documentation](https://github.com/GuitarML/Seed/blob/main/docs/seed_do
 
 If you already have a Terrarium pedal built, head to the [Releases](https://github.com/GuitarML/Seed/releases/tag/v1.0), download the .bin file, flash to the Daisy Seed and start rockin!
 
+Here is a link to the Tayda drill template for Seed v1 / Terrarium: [Drill Template](https://drill.taydakits.com/box-designs/new?public_key=VGRVZTlLNkF4Y2FRMjliVEg4TUk4dz09Cg==)  <br> Note: Double check that hole diameters match your components.
 
 ## Build Your Own Seed Pedal
 
