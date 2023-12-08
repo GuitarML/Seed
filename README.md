@@ -23,7 +23,7 @@ All models were trained using the "ns-capture" branch of the [Automated-GuitarAm
 
 Read the [Documentation](https://github.com/GuitarML/Seed/blob/main/docs/seed_doc_scaled%2090.pdf) for a rundown of all the controls.
 
-If you already have a Terrarium pedal built, head to the [Releases](), download the .bin file, flash to the Daisy Seed and start rockin!
+If you already have a Terrarium pedal built, head to the [Releases](https://github.com/GuitarML/Seed/releases/tag/v1.0), download the .bin file, flash to the Daisy Seed and start rockin!
 
 
 ## Build Your Own Seed Pedal
