@@ -1,5 +1,7 @@
 # Seed
 
+[![Downloads](https://img.shields.io/github/downloads/GuitarML/Seed/total)](https://somsubhra.github.io/github-release-stats/?username=GuitarML&repository=Seed&page=1&per_page=30)
+
 Seed is a digital multi-effects pedal with neural modeling at
 its’ heart. It features Reverb, Delay, and Tremolo to further
 modify your sound. A five minute reversible looper rounds out
