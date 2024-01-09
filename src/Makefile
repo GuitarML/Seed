@@ -1,6 +1,8 @@
 # Project Name
 TARGET = seed
 
+USE_DAISYSP_LGPL = 1
+
 # APP_TYPE = BOOT_SRAM
 
 # Sources
