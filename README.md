@@ -1,5 +1,7 @@
 # Seed
 
+[![Downloads](https://img.shields.io/github/downloads/GuitarML/Seed/total)](https://somsubhra.github.io/github-release-stats/?username=GuitarML&repository=Seed&page=1&per_page=30)
+
 Seed is a digital multi-effects pedal with neural modeling at
 its’ heart. It features Reverb, Delay, and Tremolo to further
 modify your sound. A five minute reversible looper rounds out
@@ -23,8 +25,9 @@ All models were trained using the "ns-capture" branch of the [Automated-GuitarAm
 
 Read the [Documentation](https://github.com/GuitarML/Seed/blob/main/docs/seed_doc_scaled%2090.pdf) for a rundown of all the controls.
 
-If you already have a Terrarium pedal built, head to the [Releases](), download the .bin file, flash to the Daisy Seed and start rockin!
+If you already have a Terrarium pedal built, head to the [Releases](https://github.com/GuitarML/Seed/releases/tag/v1.0), download the .bin file, flash to the Daisy Seed and start rockin!
 
+Here is a link to the Tayda drill template for Seed v1 / Terrarium: [Drill Template](https://drill.taydakits.com/box-designs/new?public_key=VGRVZTlLNkF4Y2FRMjliVEg4TUk4dz09Cg==)  <br> Note: Double check that hole diameters match your components.
 
 ## Build Your Own Seed Pedal
 
