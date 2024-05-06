@@ -48,6 +48,9 @@ the all-black UV print should show up well on light colors.
 
 IMPORTANT: If you use the Drill Template, double check that the hole diameters match your components. Especially for the LED's, which use the larger diameter hole for 5mm [LED Bezel](https://lovemyswitches.com/5mm-chrome-metal-led-bezel-bag-of-5/).
 
+### IMPORTANT Info regarding Daisy Seed rev 7 with Terrarium board (noise fix) - updated May 2024
+In all of my Terrarium builds using the Daisy Seed rev 7 (as of around Feb 2024), there has been an audible noise present in the output signal. Through some (somewhat inconclusive) internet sleuthing and disscussions with smart people, it seems that the audio codec used by Electrosmith starting with the Revision 7 of the Daisy Seed may require addional components from what the Terrarium provides. This may change in the future (with either a Terrarium or Daisy Seed revision), but for now, a simple low pass filter added at the audio output fixes the noise. This involves adding a 3.3k resistor in series followed by a 2.2nF capacitor to ground at the audio output from the Daisy Seed. What I have done on my Terrarium boards, is replace the U2 capacitor (as labeled in the Terrarium documentation) with this low pass filter/U2 configuration. The low pass filter is a 22kHz filter that shouldn't affect the audio (22kHz is above normal human hearing), and serves to put a load on the Daisy Seed output in an optimal way. Specific instructions and pictures of this fix can be found on this [PedalPCB forum](https://forum.pedalpcb.com/threads/anyone-build-a-terrarium-with-daisy-seed-v1-2-rev-7-im-getting-unusually-bad-noise-solved.21901/) 
+
 ## Build the Software
 Head to the [Electro-Smith Wiki](https://github.com/electro-smith/DaisyWiki) to learn how to set up the Daisy environment on your computer.
 
